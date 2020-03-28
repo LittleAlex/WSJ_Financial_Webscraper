@@ -103,8 +103,6 @@ def get_fundamentals(stock):
 
 inc_st, bal_sh, cash_fl = get_fundamentals('MDT')
 
-bal_sh.to_csv(r'C:\Users\alexw\OneDrive\My Files\Python\WSJ Webscraper\file1.csv')
-
 
 
 
