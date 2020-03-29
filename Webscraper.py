@@ -154,5 +154,3 @@ def get_fundamentals(stock, period="annual", exchange=""):
 
 
 inc_st, bal_sh, cash_fl = get_fundamentals('BP', period="quarter" , exchange="UK/XLON/")
-
-print(cash_fl)
