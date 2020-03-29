@@ -4,32 +4,72 @@ import urllib.request as ur
 import requests
 
 
+def convert_numbers(data):
+    col_len = data.shape[1]
+    row_len = data.shape[0]
 
-def get_fundamentals(stock):
+    for i in range(0, col_len):
+        for j in range(0, row_len):
+            if ("%" in data.iloc[j, i]) == True:
+                data.iloc[j, i] = float(data.iloc[j, i].replace("%", "")) / 100
+                continue
+            if ("," in data.iloc[j, i]) == True:
+                if ("(" in data.iloc[j, i]) == True:
+                    data.iloc[j, i] = data.iloc[j, i].replace(")", "")
+                    data.iloc[j, i] = data.iloc[j, i].replace("(", "-")
 
-    # URL Link
-    url_is = 'https://www.wsj.com/market-data/quotes/' + stock + '/financials/annual/income-statement'
-    url_bs = 'https://www.wsj.com/market-data/quotes/' + stock + '/financials/annual/balance-sheet'
-    url_cs = 'https://www.wsj.com/market-data/quotes/' + stock + '/financials/annual/cash-flow'
+                data.iloc[j, i] = float(data.iloc[j, i].replace(",", ""))
+                continue
+            if ("." in data.iloc[j, i]) == True:
+                if ("(" in data.iloc[j, i]) == True:
+                    data.iloc[j, i] = data.iloc[j, i].replace(")", "")
+                    data.iloc[j, i] = data.iloc[j, i].replace("(", "-")
 
-    headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'}
+                data.iloc[j, i] = float(data.iloc[j, i].replace(".", "")) / 100
+                continue
+            if ("(" in data.iloc[j, i]) == True:
+                data.iloc[j, i] = data.iloc[j, i].replace(")", "")
+                data.iloc[j, i] = data.iloc[j, i].replace("(", "-")
+                data.iloc[j, i] = -float(data.iloc[j, i])
+
+    return data
+
+
+def get_fundamentals(stock, period="annual", exchange=""):
+    # Functiona pulls income statement, balance sheet and cash flow from WSJ.com.
+    # Allows selection between annual and quarterly data via period = "annual" or "quarter"
+    # Allows user to input an exchange directly into the URL used (optional, default is US). Examples: UK - "UK/XLON/". Look up exchanges on WSJ.com.
+
+    url_is = 'https://www.wsj.com/market-data/quotes/' + exchange + \
+        stock + '/financials/' + period + '/income-statement'
+    url_bs = 'https://www.wsj.com/market-data/quotes/' + \
+        exchange + stock + '/financials/' + period + '/balance-sheet'
+    url_cs = 'https://www.wsj.com/market-data/quotes/' + \
+        exchange + stock + '/financials/' + period + '/cash-flow'
+
+    headers = {
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'}
 
     # INCOME STATEMENT
-    
+
     req = ur.Request(url_is, None, headers=headers)
     read_data = ur.urlopen(req).read()
     soup_is = BeautifulSoup(read_data, 'lxml')
 
     ls = []  # Create empty list
     for l in soup_is.find_all('th'):
-        #Find all data structure that is ‘div’
+        #Find all data structure that is 'th'
         ls.append(l.string)  # add each element one by one to the list
     for l in soup_is.find_all('td'):
-        #Find all data structure that is ‘div’
+        #Find all data structure that is 'td'
         ls.append(l.string)  # add each element one by one to the list
 
+    #Remove empty, '5-year trend' and '5-qtr trend' columns
     ls = list(filter(None, ls))
-    if '5-year trend' in ls: ls.remove('5-year trend')
+    if '5-year trend' in ls:
+        ls.remove('5-year trend')
+    if '5-qtr trend' in ls:
+        ls.remove('5-qtr trend')
 
     is_data = list(zip(*[iter(ls)]*6))
 
@@ -53,8 +93,12 @@ def get_fundamentals(stock):
         #Find all data structure that is ‘div’
         ls.append(l.string)  # add each element one by one to the list
 
+    #Remove empty, '5-year trend' and '5-qtr trend' columns
     ls = list(filter(None, ls))
-    if '5-year trend' in ls: ls.remove('5-year trend')
+    if '5-year trend' in ls:
+        ls.remove('5-year trend')
+    if '5-qtr trend' in ls:
+        ls.remove('5-qtr trend')
     #if 'Net Income before Extraordinaries' in ls: ls.remove('Net Income before Extraordinaries')
 
     is_data = list(zip(*[iter(ls)]*6))
@@ -77,13 +121,17 @@ def get_fundamentals(stock):
     soup_cs = BeautifulSoup(read_data, 'lxml')
 
     ls = []  # Create empty list
-    
+
     for l in soup_cs.find_all('td'):
         #Find all data structure that is ‘div’
         ls.append(l.string)  # add each element one by one to the list
 
+    #Remove empty, '5-year trend' and '5-qtr trend' columns
     ls = list(filter(None, ls))
-    if '5-year trend' in ls: ls.remove('5-year trend')
+    if '5-year trend' in ls:
+        ls.remove('5-year trend')
+    if '5-qtr trend' in ls:
+        ls.remove('5-qtr trend')
 
     is_data = list(zip(*[iter(ls)]*6))
 
@@ -98,14 +146,13 @@ def get_fundamentals(stock):
     Cash_fl.drop(Cash_fl.index[0], inplace=True)
     Cash_fl = Cash_fl.T
 
+    Income_st = convert_numbers(Income_st)
+    Balance_sh = convert_numbers(Balance_sh)
+    Cash_fl = convert_numbers(Cash_fl)
+
     return Income_st, Balance_sh, Cash_fl
 
 
-inc_st, bal_sh, cash_fl = get_fundamentals('MDT')
+inc_st, bal_sh, cash_fl = get_fundamentals('BP', period="quarter" , exchange="UK/XLON/")
 
-
-
-
-        
-
-
+print(cash_fl)
